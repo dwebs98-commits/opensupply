@@ -1,0 +1,4 @@
+facility,capacity_units,fixed_annual_cost,open
+Dallas DC,90000,180000,TRUE
+Chicago DC,75000,155000,TRUE
+Atlanta DC,60000,140000,FALSE
