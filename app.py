@@ -3,6 +3,7 @@ import streamlit as st
 
 from opensupply.optimizer import optimize_network, to_excel
 from opensupply.shipment_costing import cost_shipments
+from opensupply.scenarios import compare_scenarios
 
 st.set_page_config(page_title="OpenSupply", page_icon="🚚", layout="wide")
 st.title("OpenSupply")
@@ -26,6 +27,7 @@ with st.sidebar:
     ltl_rates_upload = st.file_uploader("LTL rates CSV", type="csv")
     tl_rates_upload = st.file_uploader("TL rates CSV", type="csv")
     fuel_rates_upload = st.file_uploader("Shipment fuel rates CSV", type="csv")
+    scenario_upload = st.file_uploader("Scenario comparison CSV", type="csv")
 
 try:
     facilities = load(facility_upload, "facilities.csv")
@@ -152,3 +154,45 @@ else:
         st.subheader("Shipment exceptions")
         st.dataframe(shipment_exceptions, hide_index=True, alt="Shipments missing a valid assignment")
     st.download_button("Export shipment costing results", shipment_detail.to_csv(index=False).encode("utf-8"), "opensupply_shipment_costing.csv", "text/csv")
+
+st.divider()
+st.header("Scenario comparison")
+st.caption("Fictional sample assumptions inspired by a logistics case study. Edit the values for a baseline, two-port recommendation, and three-port feasibility check.")
+try:
+    scenario_inputs = load(scenario_upload, "scenarios.csv")
+    scenario_inputs = st.data_editor(
+        scenario_inputs,
+        column_config={
+            "scenario": "Scenario",
+            "purpose": "Purpose",
+            **{column: st.column_config.NumberColumn(column.replace("_", " ").title(), format="$%,d") for column in ["outbound_freight", "inbound_freight", "port_management", "facility_rent", "facility_operating", "one_time_implementation"]},
+            "total_pe": st.column_config.NumberColumn("Total PE", format="%,d"),
+            "total_weight_lbs": st.column_config.NumberColumn("Total weight (lb)", format="%,d"),
+            "service_1_day": st.column_config.NumberColumn("1-day service", format="percent"),
+            "service_2_day": st.column_config.NumberColumn("2-day service", format="percent"),
+            "service_3_day": st.column_config.NumberColumn("3-day service", format="percent"),
+        },
+        hide_index=True,
+        key="scenario_inputs",
+        alt="Editable annual cost assumptions for logistics scenarios",
+    )
+    scenario_results = compare_scenarios(scenario_inputs)
+except (ValueError, pd.errors.ParserError, FileNotFoundError) as error:
+    st.error(f"Scenario comparison inputs are unavailable: {error}")
+else:
+    display_columns = ["scenario", "purpose", "annual_cost", "annual_savings", "one_time_implementation", "payback_years", "five_year_net_savings", "cost_per_pe", "cost_per_lb", "service_1_day", "service_2_day", "service_3_day"]
+    st.subheader("Baseline, two-port, and three-port comparison")
+    st.dataframe(
+        scenario_results[display_columns], hide_index=True,
+        column_config={
+            **{column: st.column_config.NumberColumn(column.replace("_", " ").title(), format="$%,.0f") for column in ["annual_cost", "annual_savings", "one_time_implementation", "five_year_net_savings"]},
+            "payback_years": st.column_config.NumberColumn("Payback years", format="%.1f"),
+            "cost_per_pe": st.column_config.NumberColumn("Cost per PE", format="$%.2f"),
+            "cost_per_lb": st.column_config.NumberColumn("Cost per lb", format="$%.2f"),
+            "service_1_day": st.column_config.NumberColumn("1-day service", format="percent"),
+            "service_2_day": st.column_config.NumberColumn("2-day service", format="percent"),
+            "service_3_day": st.column_config.NumberColumn("3-day service", format="percent"),
+        },
+        alt="Annual cost, savings, payback, and service comparison across scenarios",
+    )
+    st.download_button("Export scenario comparison", scenario_results.to_csv(index=False).encode("utf-8"), "opensupply_scenarios.csv", "text/csv")
