@@ -52,6 +52,10 @@ The shipment-costing section loads fictional templates by default and can accept
 
 Adjust the LTL weight ceiling, trailer PE capacity, 40-foot container PE capacity, and TL linehaul minimum in the app. TL loads are calculated from shipment PE and trailer capacity. Shipment-level planner overrides and audit reasons are planned next.
 
+## Scenario comparison
+
+OpenSupply includes a fictional three-scenario comparison: current network, two-port recommendation, and three-port feasibility check. Edit the annual outbound, inbound, port-management, and facility-cost assumptions in the app, then review annual savings, simple payback, five-year net savings, cost per PE, cost per pound, and service coverage. The sample values are rounded placeholders, not case-study data.
+
 ## Import ports
 
 OpenSupply can model import ports as optional inbound sources for distribution centers. Upload `ports.csv` and `inbound_lanes.csv`, then turn individual ports on or off in the app. The tool assigns each facility's outbound volume to the lowest-cost open port with available capacity, adding inbound transportation and port fixed costs to the annual total.
