@@ -2,7 +2,7 @@
 
 **Free, explainable logistics network analysis for small teams and classrooms.**
 
-OpenSupply turns a distribution-network case study into a practical starting point: upload simple CSVs, test which distribution centers are open, and get capacity-aware shipment assignments, costs, utilization, and an Excel report.
+OpenSupply turns a distribution-network case study into a practical starting point: upload simple CSVs, test which distribution centers are open, and get capacity-aware shipment assignments, costs, utilization, and an Excel export.
 
 The included data is fictional. This project deliberately contains no NT Logistics proprietary data, rates, customer names, or network details.
 
@@ -10,6 +10,7 @@ The included data is fictional. This project deliberately contains no NT Logisti
 
 - Facility capacity and fixed-cost modeling
 - Customer demand and lane-cost inputs
+- Optional import-port capacity, fixed-cost, and inbound-lane modeling
 - Least-cost, capacity-aware shipment allocations
 - Annual transportation, fixed, and total cost reporting
 - Facility utilization chart and unmet-demand warning
@@ -31,34 +32,20 @@ streamlit run app.py
 | `facilities.csv` | `facility`, `capacity_units`, `fixed_annual_cost`, `open` |
 | `demand.csv` | `customer`, `annual_demand_units` |
 | `lanes.csv` | `facility`, `customer`, `cost_per_unit` |
+| `ports.csv` | `port`, `capacity_units`, `fixed_annual_cost`, `open` |
+| `inbound_lanes.csv` | `port`, `facility`, `cost_per_unit` |
 
 Use `TRUE` or `FALSE` for `open`. Costs and quantities represent annual planning values.
 
-## Run scenarios in the app
+## Import ports
 
-Open facilities can be changed directly in the app—no spreadsheet editing is required.
+OpenSupply can model import ports as optional inbound sources for distribution centers. Upload `ports.csv` and `inbound_lanes.csv`, then turn individual ports on or off in the app. The tool assigns each facility's outbound volume to the lowest-cost open port with available capacity, adding inbound transportation and port fixed costs to the annual total.
 
-In **Choose facilities for this scenario**, use the **Include in scenario** checkbox to turn each facility on or off. The app immediately recalculates shipment assignments, facility utilization, transportation cost, total annual cost, and unmet demand.
-
-Your checkbox changes apply only to the current browser session. They do not overwrite your uploaded CSV file.
-
-### Working with larger networks
-
-OpenSupply is not limited to the included three-facility example. You can upload any number of:
-
-- Facilities in `facilities.csv`
-- Customers in `demand.csv`
-- Facility-to-customer lanes in `lanes.csv`
-
-Every customer must have at least one transportation lane from an included facility. If no included facility can serve a customer—or available capacity is insufficient—the app reports the remaining quantity as unmet demand.
-
-## Live app
-
-Try OpenSupply at [opensupply.streamlit.app](https://opensupply.streamlit.app/).
+This first model assumes one inbound unit supports one outbound unit. It does not yet convert containers, pallets, or weight into DC throughput.
 
 ## Method and limits
 
-The first release uses a transparent greedy allocation: each customer is served by its lowest-cost eligible facility until capacity is full, then the next least-cost facility. It can split demand across facilities, but it does not guarantee a globally optimal solution.
+The first release uses a transparent greedy allocation: each customer is served by its lowest-cost eligible facility until capacity is full, then the next least-cost facility. Where import ports are provided, each facility is sourced from its lowest-cost eligible port until port capacity is full. It can split demand across facilities and flags unserved demand. It does not yet model route schedules, LTL/FTL breakpoints, lead times, or true mixed-integer facility selection.
 
 ## Roadmap
 
