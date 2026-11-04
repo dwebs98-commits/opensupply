@@ -33,7 +33,7 @@ try:
     lanes = load(lanes_upload, "lanes.csv")
     ports = load(ports_upload, "ports.csv")
     inbound_lanes = load(inbound_lanes_upload, "inbound_lanes.csv")
-except (ValueError, pd.errors.ParserError) as error:
+except (ValueError, pd.errors.ParserError, FileNotFoundError) as error:
     st.error(str(error))
     st.stop()
 
@@ -134,8 +134,9 @@ try:
         ltl_max_weight=ltl_max_weight, trailer_capacity_pe=trailer_capacity,
         tl_min_linehaul=tl_minimum,
     )
-except (ValueError, pd.errors.ParserError) as error:
-    st.error(f"Shipment costing: {error}")
+except (ValueError, pd.errors.ParserError, FileNotFoundError) as error:
+    st.error(f"Shipment costing inputs are temporarily unavailable: {error}")
+    st.info("The app will use the published fictional templates after this deployment refreshes. Please reload in a minute.")
 else:
     metric_cols = st.columns(5)
     metric_cols[0].metric("Shipments costed", f"{shipment_summary['shipments_costed']:,.0f}")
