@@ -1,0 +1,3 @@
+port,capacity_units,fixed_annual_cost,open
+Port of Houston,80000,90000,TRUE
+Port of Savannah,70000,85000,TRUE
