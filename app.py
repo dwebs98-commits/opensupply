@@ -21,8 +21,31 @@ try:
     facilities = load(facility_upload, "facilities.csv")
     demand = load(demand_upload, "demand.csv")
     lanes = load(lanes_upload, "lanes.csv")
-    result = optimize_network(facilities, demand, lanes)
 except (ValueError, pd.errors.ParserError) as error:
+    st.error(str(error))
+    st.stop()
+
+st.subheader("Choose facilities for this scenario")
+st.caption("Turn a facility on to include its capacity and annual fixed cost. Your changes affect this analysis only; they do not overwrite the uploaded file.")
+facilities = facilities.copy()
+facilities["open"] = facilities["open"].astype(str).str.lower().isin(["true", "1", "yes"])
+facilities = st.data_editor(
+    facilities,
+    column_config={
+        "facility": "Facility",
+        "capacity_units": st.column_config.NumberColumn("Annual capacity", format="%,d"),
+        "fixed_annual_cost": st.column_config.NumberColumn("Annual fixed cost", format="$%,d"),
+        "open": st.column_config.CheckboxColumn("Include in scenario", help="Include this facility in the network calculation."),
+    },
+    disabled=["facility", "capacity_units", "fixed_annual_cost"],
+    hide_index=True,
+    key="facility_scenario",
+    alt="Facilities available to include in the network scenario",
+)
+
+try:
+    result = optimize_network(facilities, demand, lanes)
+except ValueError as error:
     st.error(str(error))
     st.stop()
 
@@ -43,7 +66,7 @@ with right:
     st.bar_chart(result.facility_summary.set_index("facility")[["transport_cost", "fixed_annual_cost"]])
 
 st.subheader("Recommended shipment assignments")
-st.dataframe(result.shipments, use_container_width=True, hide_index=True)
+st.dataframe(result.shipments, hide_index=True, alt="Recommended annual shipment assignments")
 st.download_button("Export analysis to Excel", to_excel(result), "opensupply_network_analysis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 with st.expander("Inspect loaded inputs"):
