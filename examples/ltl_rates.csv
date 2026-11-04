@@ -1,0 +1,7 @@
+facility,min_miles,max_miles,min_weight_lbs,max_weight_lbs,rate_per_lb
+Dallas DC,0,500,500,15999,0.07
+Dallas DC,501,2000,500,15999,0.12
+Chicago DC,0,500,500,15999,0.065
+Chicago DC,501,2000,500,15999,0.11
+Atlanta DC,0,500,500,15999,0.06
+Atlanta DC,501,2000,500,15999,0.10
