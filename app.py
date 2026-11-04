@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from opensupply.optimizer import optimize_network, to_excel
+from opensupply.shipment_costing import cost_shipments
 
 st.set_page_config(page_title="OpenSupply", page_icon="🚚", layout="wide")
 st.title("OpenSupply")
@@ -18,6 +19,13 @@ with st.sidebar:
     lanes_upload = st.file_uploader("Lanes CSV", type="csv")
     ports_upload = st.file_uploader("Import ports CSV", type="csv")
     inbound_lanes_upload = st.file_uploader("Inbound port lanes CSV", type="csv")
+    st.divider()
+    st.header("Shipment costing inputs")
+    shipment_upload = st.file_uploader("Shipments CSV", type="csv")
+    shipment_mileage_upload = st.file_uploader("Shipment mileage CSV", type="csv")
+    ltl_rates_upload = st.file_uploader("LTL rates CSV", type="csv")
+    tl_rates_upload = st.file_uploader("TL rates CSV", type="csv")
+    fuel_rates_upload = st.file_uploader("Shipment fuel rates CSV", type="csv")
 
 try:
     facilities = load(facility_upload, "facilities.csv")
@@ -101,3 +109,45 @@ with st.expander("Inspect loaded inputs"):
     tabs[2].dataframe(lanes, hide_index=True)
     tabs[3].dataframe(ports, hide_index=True)
     tabs[4].dataframe(inbound_lanes, hide_index=True)
+
+st.divider()
+st.header("Shipment costing foundation")
+st.caption("Fictional shipment data is loaded by default. The tool evaluates every open-facility option, compares eligible LTL and TL costs, and keeps the lowest-cost option.")
+rule_cols = st.columns(4)
+with rule_cols[0]:
+    ltl_max_weight = st.number_input("Maximum LTL weight (lb)", min_value=1, value=15999, step=1, key="ltl_max_weight")
+with rule_cols[1]:
+    trailer_capacity = st.number_input("53-ft trailer capacity (PE)", min_value=1, value=26, step=1, key="trailer_capacity")
+with rule_cols[2]:
+    container_capacity = st.number_input("40-ft container capacity (PE)", min_value=1, value=20, step=1, key="container_capacity")
+with rule_cols[3]:
+    tl_minimum = st.number_input("TL minimum linehaul ($)", min_value=0, value=700, step=50, key="tl_minimum")
+
+try:
+    shipment_data = load(shipment_upload, "shipments.csv")
+    shipment_mileage = load(shipment_mileage_upload, "shipment_mileage.csv")
+    ltl_rates = load(ltl_rates_upload, "ltl_rates.csv")
+    tl_rates = load(tl_rates_upload, "tl_rates.csv")
+    shipment_fuel = load(fuel_rates_upload, "fuel_rates.csv")
+    shipment_detail, shipment_exceptions, shipment_summary = cost_shipments(
+        shipment_data, facilities, shipment_mileage, ltl_rates, tl_rates, shipment_fuel,
+        ltl_max_weight=ltl_max_weight, trailer_capacity_pe=trailer_capacity,
+        tl_min_linehaul=tl_minimum,
+    )
+except (ValueError, pd.errors.ParserError) as error:
+    st.error(f"Shipment costing: {error}")
+else:
+    metric_cols = st.columns(5)
+    metric_cols[0].metric("Shipments costed", f"{shipment_summary['shipments_costed']:,.0f}")
+    metric_cols[1].metric("Outbound cost", f"${shipment_summary['total_outbound_cost']:,.0f}")
+    metric_cols[2].metric("LTL shipments", f"{shipment_summary['ltl_shipments']:,.0f}")
+    metric_cols[3].metric("TL shipments", f"{shipment_summary['tl_shipments']:,.0f}")
+    metric_cols[4].metric("Unpriced shipments", f"{shipment_summary['unpriced_shipments']:,.0f}")
+    if shipment_summary["unpriced_shipments"]:
+        st.warning("Some shipments could not be costed. Add a mileage, rate, or fuel rule for every open-facility option.")
+    st.subheader("Lowest-cost shipment assignments")
+    st.dataframe(shipment_detail, hide_index=True, alt="Lowest-cost facility and mode assignment for each shipment")
+    if not shipment_exceptions.empty:
+        st.subheader("Shipment exceptions")
+        st.dataframe(shipment_exceptions, hide_index=True, alt="Shipments missing a valid assignment")
+    st.download_button("Export shipment costing results", shipment_detail.to_csv(index=False).encode("utf-8"), "opensupply_shipment_costing.csv", "text/csv")
