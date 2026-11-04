@@ -1,0 +1,5 @@
+shipment_id,destination_zip,weight_lbs,pallet_equivalents
+S-1001,30303,2500,2
+S-1002,28202,9000,8
+S-1003,75201,18000,18
+S-1004,60601,30000,30
