@@ -1,0 +1,4 @@
+scenario,purpose,outbound_freight,inbound_freight,port_management,facility_rent,facility_operating,one_time_implementation,total_pe,total_weight_lbs,service_1_day,service_2_day,service_3_day
+Current network,Baseline,13000000,18200000,123000,2800000,3180000,0,63700,79600000,0.43,0.50,0.56
+Two-port network,Primary recommendation,10800000,17600000,180000,3100000,3000000,2400000,63700,79600000,0.57,0.72,0.84
+Three-port network,Feasibility check,10500000,17400000,255000,3450000,3050000,3600000,63700,79600000,0.61,0.76,0.87
