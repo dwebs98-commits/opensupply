@@ -16,11 +16,15 @@ with st.sidebar:
     facility_upload = st.file_uploader("Facilities CSV", type="csv")
     demand_upload = st.file_uploader("Demand CSV", type="csv")
     lanes_upload = st.file_uploader("Lanes CSV", type="csv")
+    ports_upload = st.file_uploader("Import ports CSV", type="csv")
+    inbound_lanes_upload = st.file_uploader("Inbound port lanes CSV", type="csv")
 
 try:
     facilities = load(facility_upload, "facilities.csv")
     demand = load(demand_upload, "demand.csv")
     lanes = load(lanes_upload, "lanes.csv")
+    ports = load(ports_upload, "ports.csv")
+    inbound_lanes = load(inbound_lanes_upload, "inbound_lanes.csv")
 except (ValueError, pd.errors.ParserError) as error:
     st.error(str(error))
     st.stop()
@@ -43,19 +47,38 @@ facilities = st.data_editor(
     alt="Facilities available to include in the network scenario",
 )
 
+st.subheader("Choose import ports for this scenario")
+st.caption("Turn a port on to include its inbound capacity and annual fixed cost. One inbound unit is assumed for every unit shipped from a facility.")
+ports = ports.copy()
+ports["open"] = ports["open"].astype(str).str.lower().isin(["true", "1", "yes"])
+ports = st.data_editor(
+    ports,
+    column_config={
+        "port": "Import port",
+        "capacity_units": st.column_config.NumberColumn("Annual capacity", format="%,d"),
+        "fixed_annual_cost": st.column_config.NumberColumn("Annual fixed cost", format="$%,d"),
+        "open": st.column_config.CheckboxColumn("Include in scenario", help="Include this import port in the inbound cost calculation."),
+    },
+    disabled=["port", "capacity_units", "fixed_annual_cost"],
+    hide_index=True,
+    key="port_scenario",
+    alt="Import ports available to include in the scenario",
+)
+
 try:
-    result = optimize_network(facilities, demand, lanes)
+    result = optimize_network(facilities, demand, lanes, ports, inbound_lanes)
 except ValueError as error:
     st.error(str(error))
     st.stop()
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("Annual cost", f"${result.kpis['total_cost']:,.0f}")
-c2.metric("Transportation", f"${result.kpis['transport_cost']:,.0f}")
-c3.metric("Demand served", f"{result.kpis['served_units']:,.0f} units")
-c4.metric("Unmet demand", f"{result.kpis['unmet_units']:,.0f} units")
-if result.kpis["unmet_units"]:
-    st.warning("This network cannot serve all demand. Open more capacity or revise lane coverage.")
+c2.metric("Outbound transport", f"${result.kpis['transport_cost']:,.0f}")
+c3.metric("Inbound transport", f"${result.kpis['inbound_transport_cost']:,.0f}")
+c4.metric("Demand served", f"{result.kpis['served_units']:,.0f} units")
+c5.metric("Unmet inbound", f"{result.kpis['unmet_inbound_units']:,.0f} units")
+if result.kpis["unmet_units"] or result.kpis["unmet_inbound_units"]:
+    st.warning("The network cannot fully serve demand or source the assigned facility volume. Open more facility or port capacity, or revise lane coverage.")
 
 left, right = st.columns(2)
 with left:
@@ -67,10 +90,14 @@ with right:
 
 st.subheader("Recommended shipment assignments")
 st.dataframe(result.shipments, hide_index=True, alt="Recommended annual shipment assignments")
+st.subheader("Recommended port-to-facility assignments")
+st.dataframe(result.inbound_shipments, hide_index=True, alt="Recommended annual inbound port assignments")
 st.download_button("Export analysis to Excel", to_excel(result), "opensupply_network_analysis.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 with st.expander("Inspect loaded inputs"):
-    tabs = st.tabs(["Facilities", "Demand", "Lanes"])
+    tabs = st.tabs(["Facilities", "Demand", "Outbound lanes", "Ports", "Inbound lanes"])
     tabs[0].dataframe(facilities, hide_index=True)
     tabs[1].dataframe(demand, hide_index=True)
     tabs[2].dataframe(lanes, hide_index=True)
+    tabs[3].dataframe(ports, hide_index=True)
+    tabs[4].dataframe(inbound_lanes, hide_index=True)
