@@ -15,6 +15,7 @@ The included data is fictional. This project deliberately contains no NT Logisti
 - Annual transportation, fixed, and total cost reporting
 - Facility utilization chart and unmet-demand warning
 - Excel export of the full analysis
+- Shipment-level LTL/TL cost comparison and lowest-cost facility assignment
 
 ## Run locally
 
@@ -36,6 +37,20 @@ streamlit run app.py
 | `inbound_lanes.csv` | `port`, `facility`, `cost_per_unit` |
 
 Use `TRUE` or `FALSE` for `open`. Costs and quantities represent annual planning values.
+
+## Shipment costing foundation
+
+The shipment-costing section loads fictional templates by default and can accept your own CSVs. It evaluates each shipment from every open facility, prices eligible LTL and TL options, and selects the lowest-cost valid assignment.
+
+| File | Required columns |
+| --- | --- |
+| `shipments.csv` | `shipment_id`, `destination_zip`, `weight_lbs`, `pallet_equivalents` |
+| `shipment_mileage.csv` | `facility`, `destination_zip`, `distance_miles` |
+| `ltl_rates.csv` | `facility`, `min_miles`, `max_miles`, `min_weight_lbs`, `max_weight_lbs`, `rate_per_lb` |
+| `tl_rates.csv` | `min_miles`, `max_miles`, `rate_per_mile` |
+| `fuel_rates.csv` | `facility`, `ltl_fuel_pct`, `tl_fuel_per_mile` |
+
+Adjust the LTL weight ceiling, trailer PE capacity, 40-foot container PE capacity, and TL linehaul minimum in the app. TL loads are calculated from shipment PE and trailer capacity. Shipment-level planner overrides and audit reasons are planned next.
 
 ## Import ports
 
